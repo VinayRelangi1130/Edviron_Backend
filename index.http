@@ -1,0 +1,52 @@
+GET http://localhost:3000/getall
+###
+
+
+POST http://localhost:3000/transactions
+Content-Type: application/json
+
+{
+  "sNo": 22,
+  "instituteName": "QQQ Institute",
+  "dateTime": "2025-01-09T10:42:00",
+  "orderId": "ORD428062",
+  "orderAmount": 100000,
+  "transactionAmount": 100000,
+  "paymentMethod": "Credit Card",
+  "status": "Pending",
+  "studentName": "Manikanta",
+  "phoneNo": 1244400875,
+  "vendorAmount": 100000
+}
+###
+
+GET http://localhost:3000/transactions-by-school/XYZ%20Institute
+###
+
+
+GET http://localhost:3000/status/ORD12347
+###
+
+
+POST http://localhost:3000/webhook/status-update
+Content-Type: application/json
+
+{
+    "orderId": "ORD12345",
+    "status": "Pending"
+}
+
+###
+
+
+POST http://localhost:3000/manual-status-update
+Content-Type: application/application/json
+
+{
+    "orderId": "ORD12345",
+    "status": "Pending"
+}
+
+###
+
+GET http://localhost:3000/collections
