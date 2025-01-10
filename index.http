@@ -6,7 +6,7 @@ POST http://localhost:3000/transactions
 Content-Type: application/json
 
 {
-  "sNo": 22,
+  "sNo": 24,
   "instituteName": "QQQ Institute",
   "dateTime": "2025-01-09T10:42:00",
   "orderId": "ORD428062",
@@ -24,7 +24,7 @@ GET http://localhost:3000/transactions-by-school/XYZ%20Institute
 ###
 
 
-GET http://localhost:3000/status/ORD12347
+GET http://localhost:3000/status/ORD12345
 ###
 
 
@@ -32,21 +32,24 @@ POST http://localhost:3000/webhook/status-update
 Content-Type: application/json
 
 {
-    "orderId": "ORD12345",
-    "status": "Pending"
+    "status": 200,
+    "order_info": {
+        "order_id": "ORD12345",
+        "order_amount": 2000,
+        "transaction_amount": 2200,
+        "gateway": "PhonePe",
+        "bank_reference": "YESBNK222"
+    }
 }
 
 ###
+
 
 
 POST http://localhost:3000/manual-status-update
-Content-Type: application/application/json
+Content-Type: application/json
 
 {
     "orderId": "ORD12345",
-    "status": "Pending"
+    "status": "Pending Approval"
 }
-
-###
-
-GET http://localhost:3000/collections
