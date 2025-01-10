@@ -8,9 +8,9 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection -> mongoURI: This variable holds your MongoDB connection string.
-//  This is what allows your Node.js app to connect to your MongoDB database.
-const mongoURI = "mongodb+srv://test-user:edviron@edvironassessment.ub8p5.mongodb.net/?retryWrites=true&w=majority&appName=edvironAssessment"
-//   "mongodb+srv://rvinay1130:RITAMLs6HzI79N6U@edviron.lzfk4.mongodb.net/?retryWrites=true&w=majority&appName=edviron";
+//  allows your Node.js app to connect to your MongoDB database.
+const mongoURI =  "mongodb+srv://rvinay1130:RITAMLs6HzI79N6U@edviron.lzfk4.mongodb.net/?retryWrites=true&w=majority&appName=edviron";
+// const mongoURI = "mongodb+srv://test-user:edviron@edvironassessment.ub8p5.mongodb.net/?retryWrites=true&w=majority&appName=edvironAssessment"
 
 //mongoose.connect(mongoURI):
 // This function establishes a connection with the MongoDB database using the provided URI.
@@ -20,39 +20,16 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 
 //fetch all transaction details
-  app.get('/getall', async (req, res) => {
-    console.log("GET /transactions route hit");
-
+app.get('/getall', async (req, res) => {
     try {
         const transactions = await Transaction.find();
+
         res.status(200).json(transactions);
     } catch (err) {
+        console.error("Error fetching transactions:", err);
         res.status(500).json({ error: 'Failed to fetch transactions', details: err.message });
     }
 });
-
-
-// Endpoint to list all collections in the database
-app.get('/collections', async (req, res) => {
-    try {
-        // Get the database instance from the Mongoose connection
-        const db = mongoose.connection.db;
-
-        // List all collections in the database
-        const collections = await db.listCollections().toArray();
-        const collection = mongoose.connection.listDatabases();
-        // console.log(collections)
-        console.log(collection)
-        // Extract and return the collection names
-        // const collectionNames = collections.map((collection) => collection.name);
-        res.status(200).json({ collection });
-    } catch (err) {
-        // Handle any errors
-        res.status(500).json({ error: 'Failed to fetch collections', details: err.message });
-    }
-});
-
-
 
 // create new posts 
 app.post("/transactions", async (req, res) => {
@@ -92,7 +69,6 @@ app.post("/transactions", async (req, res) => {
   }
 });
 
-
 // fetch all transactions by instituteName
 app.get('/transactions-by-school/:instituteName', async (req, res) => {
     const { instituteName } = req.params;  // Get instituteName from the URL params
@@ -113,8 +89,6 @@ app.get('/transactions-by-school/:instituteName', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch transactions', details: err.message });
     }
 });
-
-
 
 // fetch the transaction status by orderId
 app.get('/status/:orderId', async (req, res) => {
@@ -140,55 +114,59 @@ app.get('/status/:orderId', async (req, res) => {
     }
 });
 
-
-// POST route to handle the webhook for status updates
+// // POST route to handle the webhook for status updates
+// Webhook for status updates
 app.post('/webhook/status-update', async (req, res) => {
-    const { orderId, status } = req.body;  // Extract orderId and status from the request body
+    const { status, order_info } = req.body;
 
-    if (!orderId || !status) {
-        // If orderId or status is missing, return an error response
-        return res.status(400).json({ error: 'orderId and status are required' });
+    // Validate the payload format
+    if (!order_info || !order_info.order_id) {
+        return res.status(400).json({ error: 'Invalid payload format' });
     }
 
     try {
-        // Find the transaction by orderId
-        const transaction = await Transaction.findOne({ orderId: orderId });
+        // Find the transaction by order_id
+        const transaction = await Transaction.findOne({ orderId: order_info.order_id });
 
-        // If the transaction doesn't exist, return a 404 error
+        // Check if the transaction exists
         if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
+            return res.status(404).json({ error: 'Transaction not found for the given order ID' });
         }
 
-        // Update the transaction status
-        transaction.status = status;
+        // Update the transaction with the new status and additional details
+        transaction.status = status === 200 ? "Completed" : "Failed"; // Assuming 200 means success
+        transaction.transactionAmount = order_info.transaction_amount;
+        transaction.paymentMethod = order_info.gateway; // Update gateway as payment method
+        transaction.bankReference = order_info.bank_reference; // Add bank reference
 
         // Save the updated transaction
         await transaction.save();
 
         // Return a success response
-        res.status(200).json({ message: 'Transaction status updated successfully', orderId: orderId, status: status });
+        res.status(200).json({ message: 'Transaction status updated successfully', transaction });
     } catch (err) {
-        // If an error occurs, return a 500 error
+        // Handle any errors during the update
+        console.error("Error updating transaction status:", err);
         res.status(500).json({ error: 'Failed to update transaction status', details: err.message });
     }
 });
 
 
-// Manually update the status of a transaction
+// // Manually update the status of a transaction
+// Manual status update for a transaction
 app.post('/manual-status-update', async (req, res) => {
-    // Destructure orderId and new status from the request body
     const { orderId, status } = req.body;
 
-    // Check if both orderId and status are provided
+    // Validate the input
     if (!orderId || !status) {
         return res.status(400).json({ error: 'Both orderId and status are required' });
     }
 
     try {
-        // Find the transaction by its orderId
-        const transaction = await Transaction.findOne({ orderId: orderId });
+        // Find the transaction by orderId
+        const transaction = await Transaction.findOne({ orderId });
 
-        // If no transaction is found with the given orderId, return an error
+        // Check if the transaction exists
         if (!transaction) {
             return res.status(404).json({ error: 'Transaction not found' });
         }
@@ -196,21 +174,18 @@ app.post('/manual-status-update', async (req, res) => {
         // Update the status of the transaction
         transaction.status = status;
 
-        // Save the updated transaction back to the database
+        // Save the updated transaction
         await transaction.save();
 
-        // Return a success response with the updated transaction
+        // Return a success response
         res.status(200).json({
             message: 'Transaction status updated successfully',
-            orderId: orderId,
-            updatedStatus: status
+            transaction,
         });
     } catch (err) {
-        // Return a 500 error if something goes wrong
-        res.status(500).json({
-            error: 'Failed to update transaction status',
-            details: err.message
-        });
+        // Handle errors
+        console.error("Error updating transaction status manually:", err);
+        res.status(500).json({ error: 'Failed to update transaction status', details: err.message });
     }
 });
 
@@ -219,3 +194,4 @@ app.post('/manual-status-update', async (req, res) => {
 // Start Server
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
